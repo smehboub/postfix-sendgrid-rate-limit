@@ -1,0 +1,84 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: smtp
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: smtp-credentials
+  namespace: smtp
+type: Opaque
+data:
+stringData:
+  username: user
+  password: password
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    secret.reloader.stakater.com/reload: smtp-credentials
+  labels:
+    role: mail
+  name: mail
+  namespace: smtp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      role: mail
+  template:
+    metadata:
+      labels:
+        role: mail
+    spec:
+      hostname: "mail"
+      restartPolicy: Always
+      subdomain: "sophian-mehboub-qualification"
+      containers:
+      - name: postfix
+        image: smehboub/postfix-sendgrid-rate-limit
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 256M
+        ports:
+        - containerPort: 25
+        env:
+        - name: USER
+          valueFrom:
+            secretKeyRef:
+              name: smtp-credentials
+              key: username
+        - name: PASS
+          valueFrom:
+            secretKeyRef:
+              name: smtp-credentials
+              key: password
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - ps ax -ocmd | grep master | grep -v grep && ps ax -ocmd | grep postfwd | grep -v grep
+          initialDelaySeconds: 30
+          periodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    role: mail
+  name: mail
+  namespace: smtp
+spec:
+  ports:
+  - name: "25"
+    port: 25
+  selector:
+    role: mail

@@ -1,0 +1,18 @@
+version: '3'
+services:
+  mail:
+    image: smehboub/postfix-sendgrid-rate-limit
+    container_name: postfix
+    hostname: mail
+    domainname: example.com
+    ports:
+      - "25:25"
+    environment:
+      - USER=user
+      - PASS=password
+      # max count number email send
+      # default: 4
+      - SEND_RATE_LIMIT_MAX=4
+      # time rate of max count number email send (seconds)
+      # default: 1800
+      - SEND_RATE_LIMIT_TIME=1800
